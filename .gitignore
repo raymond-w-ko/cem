@@ -1,0 +1,12 @@
+/.calva
+/.cpcache
+/.lsp
+/.nrepl-port
+.cache
+
+# Java
+*.class
+*.jar
+/target/classes/*
+
+/tmp/

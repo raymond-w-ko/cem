@@ -1,0 +1,11 @@
+{:linters
+ {;; :unused-referred-var {:level :off}
+  :unresolved-var {:exclude []}
+  :unused-namespace {:exclude []}
+  :clojure-lsp/unused-public-var
+  {:exclude #{}
+   :exclude-regex #{}}}
+ :lint-as {}
+ :hooks {:analyze-call {com.cem.ed.macros/binding-block hooks.binding-block/binding-block
+                        com.cem.ed.macros/bb hooks.binding-block/bb}
+         :macroexpand {com.cem.ed.macros/args macros/args}}}

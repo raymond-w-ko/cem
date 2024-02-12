@@ -1,0 +1,17 @@
+{:paths ["src/clj"
+         "target/classes"
+         "test"]
+ :deps {org.clojure/clojure {:mvn/version "1.11.1"}
+        org.clojure/tools.nrepl {:mvn/version "0.2.13"}
+        org.slf4j/slf4j-nop {:mvn/version "2.0.12"}
+
+        net.java.dev.jna/jna {:mvn/version "5.14.0"}
+
+        nrepl/nrepl       {:mvn/version "1.1.0"}
+        cider/cider-nrepl {:mvn/version "0.45.0"}}
+ :aliases
+ {:cem {:main-opts ["-m" "com.cem.ed.core"]}
+  :build {:extra-deps {io.github.clojure/tools.build {:mvn/version "0.9.6"}}
+          :ns-default build}
+  :outdated {:extra-deps {com.github.liquidz/antq {:mvn/version "RELEASE"}}
+             :main-opts ["-m" "antq.core"]}}}

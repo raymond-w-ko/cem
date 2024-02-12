@@ -1,0 +1,26 @@
+<project>
+  <modelVersion>4.0.0</modelVersion>
+ 
+  <groupId>com.cem</groupId>
+  <artifactId>ed</artifactId>
+  <version>1</version>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.source>1.21</maven.compiler.source>
+    <maven.compiler.target>1.21</maven.compiler.target>
+    <java.version>1.21</java.version>
+  </properties>
+
+  <build>
+    <sourceDirectory>src/jvm</sourceDirectory>
+  </build>
+
+  <dependencies>
+    <dependency>
+      <groupId>net.java.dev.jna</groupId>
+      <artifactId>jna</artifactId>
+      <version>5.14.0</version>
+    </dependency>
+  </dependencies>
+</project>

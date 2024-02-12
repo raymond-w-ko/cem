@@ -1,0 +1,9 @@
+{
+  "java.project.sourcePaths": [
+    "src/jvm"
+  ],
+  "java.configuration.updateBuildConfiguration": "interactive",
+  "files.associations": {
+    "ncurses.h": "c"
+  },
+}
