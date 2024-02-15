@@ -76,3 +76,13 @@
                           (:let :plet :pplet) [(first body) (rest body)]
                           [:let body])]
     `(binding-block ~let-mode ~@body)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defmacro enable-obj-bitfield-option! [o field flag]
+  `(let [x# (. ~o ~field)]
+     (set! (. ~o ~field) (bit-or x# ~flag))))
+
+(defmacro disable-obj-bitfield-option! [o field flag]
+  `(let [x# (. ~o ~field)]
+     (set! (. ~o ~field) (bit-and x# (bit-not ~flag)))))
