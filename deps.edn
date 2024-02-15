@@ -3,6 +3,7 @@
          "test"]
  :deps {org.clojure/clojure {:mvn/version "1.11.1"}
         org.clojure/tools.nrepl {:mvn/version "0.2.13"}
+        org.clojure/core.async {:mvn/version "1.6.681"}
         org.slf4j/slf4j-nop {:mvn/version "2.0.12"}
 
         net.java.dev.jna/jna {:mvn/version "5.14.0"}
