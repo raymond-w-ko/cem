@@ -1,6 +1,6 @@
 (ns com.cem.ed.core
   (:require [cider.nrepl :refer [cider-nrepl-handler]]
-            [com.cem.ed.macros :refer [bb]]
+            [clojure.core.async :as async :refer [<!!]]
             [com.cem.ed.term :as term]
             [nrepl.server :as nrepl-server])
   (:import [java.lang System]
@@ -9,8 +9,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn -main
-  "I don't do a whole lot ... yet."
-  [& args]
+  [& _args]
   (Signal/handle (new Signal "INT") (reify SignalHandler
                                       (handle [_this _sig]
                                         (term/teardown!)
@@ -18,5 +17,5 @@
   (nrepl-server/start-server :port 6888 :handler cider-nrepl-handler)
   (term/init!)
   (term/setup)
-  ;; (System/exit 0)
-  nil)
+  (<!! (term/stdin-read-loop!))
+  (term/die-properly!))
