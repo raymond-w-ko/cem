@@ -4,6 +4,8 @@
   ],
   "java.configuration.updateBuildConfiguration": "interactive",
   "files.associations": {
-    "ncurses.h": "c"
+    "ncurses.h": "c",
+    "termios.h": "c",
+    "stdio.h": "c"
   },
 }
