@@ -12,6 +12,7 @@
 (defn -main
   [& _args]
   (bb
+  ;;  (System/setProperty "clojure.core.async.go-checking" "true")
    x (System/getenv "COLORTERM")
    :return-when (not x) (throw (new Exception "COLORTERM not set"))
    (when (and (not= x "truecolor") (not= x "24bit"))
