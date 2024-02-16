@@ -1,11 +1,13 @@
 (ns com.cem.ed.term
   (:refer-clojure :exclude [*in* *out* *err*])
-  (:require [clojure.core.async :as async :refer [<! <!! >! alts!! buffer chan
-                                                  close! go timeout]]
+  (:require [clojure.core.async :as async :refer [<! >! alts! buffer chan
+                                                  close! go]]
             [com.cem.ed.macros :refer [->hash bb disable-obj-bitfield-option!]]
+            [com.cem.ed.term.constants :refer [csi]]
+            [com.cem.ed.term.kitty :as kitty :refer [begin-kitty-keyboard-protocol!
+                                                     end-kitty-keyboard-protocol!]]
             [com.cem.ed.utf8 :refer [channel+first-byte->key-event]]
-            [com.cem.ed.utils :refer [get-timestamp]]
-            [com.cem.ed.term.kitty :as kitty])
+            [com.cem.ed.utils :refer [get-timestamp rand-int-between]])
   (:import [com.cem.ed.platform.linux
             LibC
             LibC$Termios
@@ -14,21 +16,16 @@
            [com.sun.jna Pointer]
            [java.io FileDescriptor FileInputStream FileOutputStream]
            [java.lang System]
-           [java.util ArrayList]
            [sun.misc Signal SignalHandler]))
 
 (def stdin-fd 0)
 (def stdout-fd 1)
-(def stderr-fd 2)
-(def ^:dynamic *in* (new FileInputStream (FileDescriptor/in)))
-(def ^:dynamic *out* (new FileOutputStream (FileDescriptor/out)))
-(def ^:dynamic *err* (new FileOutputStream (FileDescriptor/err)))
+;; (def stderr-fd 2)
+(def ^:dynamic ^FileInputStream *in* (new FileInputStream (FileDescriptor/in)))
+(def ^:dynamic ^FileOutputStream *out* (new FileOutputStream (FileDescriptor/out)))
+;; (def ^:dynamic *err* (new FileOutputStream (FileDescriptor/err)))
 (def *term-dim (atom {:rows nil :cols nil}))
 (defonce *initial-termios (atom nil))
-
-(def csi "Control Sequence Introducer" "\u001B[")
-(def kitty-keyboard-protocol-begin-code "Kitty Keyboard Protocol Begin" (str csi ">1u"))
-(def kitty-keyboard-protocol-end-code "Kitty Keyboard Protocol End" (str csi "<u"))
 
 (defonce *string-caps (atom {}))
 (defonce *esc-timeout-ms (atom 250))
@@ -63,6 +60,8 @@
    (load-string-cap! "clear")
    (load-string-cap! "rmcup")
    (load-string-cap! "smcup")
+   (load-string-cap! "rmam")
+   (load-string-cap! "smam")
    nil))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -76,6 +75,12 @@
 (defn clear! [] (out! (get @*string-caps "clear")))
 (defn alternate-screen! [] (out! (get @*string-caps "smcup")))
 (defn normal-screen! [] (out! (get @*string-caps "rmcup")))
+(defn disable-line-wrap! [] (out! (get @*string-caps "rmam")))
+(defn enable-line-wrap! [] (out! (get @*string-caps "smam")))
+(defn reset-color-output! [] (out! csi) (out! "0m"))
+(defn set-bg-color! [r g b] (out! csi) (out! (str "48;2;" r ";" g ";" b "m")))
+(defn set-fg-color! [r g b] (out! csi) (out! (str "38;2;" r ";" g ";" b "m")))
+(defn move-cursor! [x y] (out! (str csi (inc y) ";" (inc x) "H")))
 
 (defn setup-termios! []
   (bb
@@ -107,9 +112,6 @@
 (defn restore-termios! []
   (LibC/tcsetattr stdin-fd LibC/TCSANOW @*initial-termios))
 
-(defn begin-kitty-keyboard-protocol! [] (out! kitty-keyboard-protocol-begin-code))
-(defn end-kitty-keyboard-protocol! [] (out! kitty-keyboard-protocol-end-code))
-
 (defn setup
   "Use this to set up the terminal before running your program."
   []
@@ -119,7 +121,8 @@
                                         (handle [_this _sig]
                                           (update-terminal-size!))))
   (alternate-screen!)
-  (begin-kitty-keyboard-protocol!)
+  (disable-line-wrap!)
+  (begin-kitty-keyboard-protocol! out!)
   (clear!)
   (println "terminal size: " @*term-dim)
   (println @*initial-termios)
@@ -130,15 +133,49 @@
 (defn teardown!
   "Use this to clean up the terminal before exiting."
   []
-  (end-kitty-keyboard-protocol!)
+  (end-kitty-keyboard-protocol! out!)
+  (enable-line-wrap!)
+  (reset-color-output!)
   (normal-screen!)
   (restore-termios!)
   (flush!)
   nil)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defonce request-stop-rendering-ch (chan 1))
+(defonce stop-rendering-done-ch (chan 1))
+
+(defn render-loop! []
+  (let [*last-x (atom -1)
+        *last-y (atom -1)]
+    (go
+      (loop [x 0
+             y 0]
+        (let [[_v ch] (alts! [(async/timeout 1) request-stop-rendering-ch])]
+          (if (= ch request-stop-rendering-ch)
+            (close! stop-rendering-done-ch)
+            (let [{:keys [rows cols]} @*term-dim
+                  new-x (inc x)
+                  new-y (if (>= new-x cols) (inc y) y)
+                  new-x (mod new-x cols)
+                  new-y (mod new-y rows)]
+              (when-not (and (= new-y @*last-y))
+                (move-cursor! new-x new-y)
+                (reset! *last-x new-x)
+                (reset! *last-y new-y))
+              (set-bg-color! (rand-int 256) (rand-int 256) (rand-int 256))
+              (set-fg-color! (rand-int 256) (rand-int 256) (rand-int 256))
+              (out! (new String (int-array [(rand-int-between 0x20 0x7e)]) 0 1))
+              (recur new-x new-y))))))))
+
+
 (defn die-properly! []
-  (teardown!)
-  (System/exit 0))
+  (go
+    (>! request-stop-rendering-ch true)
+    (alts! [(async/timeout 1) stop-rendering-done-ch])
+    (teardown!)
+    (System/exit 0)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
