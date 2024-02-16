@@ -1,8 +1,11 @@
 (ns com.cem.ed.term.kitty
   (:require [clojure.core.async :as async :refer [<!! alts!! timeout]]
-            [com.cem.ed.macros :refer [bb]])
+            [com.cem.ed.macros :refer [bb]]
+            [com.cem.ed.term.constants :refer [csi]])
   (:import [java.util ArrayList]))
 
+(def kitty-keyboard-protocol-begin-code "Kitty Keyboard Protocol Begin" (str csi ">1u"))
+(def kitty-keyboard-protocol-end-code "Kitty Keyboard Protocol End" (str csi "<u"))
 
 ;; CSI number ; modifiers [u~]
 ;; CSI 1; modifiers [ABCDEFHPQS]
@@ -60,6 +63,12 @@
 
 (def escape-code-regex #"(\d+);(\d+)*([u~ABCDEFHPQS])")
 
+
+(defn begin-kitty-keyboard-protocol! [out!] (out! kitty-keyboard-protocol-begin-code))
+(defn end-kitty-keyboard-protocol! [out!] (out! kitty-keyboard-protocol-end-code))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defn parse-mods
   "Returns a set of modifier keys from a kitty key even modifier number string."
   [s]
@@ -101,6 +110,5 @@
    k (get func-key-lookup-table [num-str suffix])
    :return-when k [[mods k] @*t]
    n (Integer/parseInt num-str)
-   (println n)
    k (new String (int-array [n]) 0 1)
    [[mods k] @*t]))
