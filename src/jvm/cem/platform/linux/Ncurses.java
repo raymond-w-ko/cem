@@ -1,4 +1,4 @@
-package com.cem.ed.platform.linux;
+package cem.platform.linux;
 
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;

@@ -1,8 +1,8 @@
-(ns com.cem.ed.core
+(ns cem.core
   (:require [cider.nrepl :refer [cider-nrepl-handler]]
             [clojure.core.async :as async :refer [<!!]]
-            [com.cem.ed.macros :refer [bb]]
-            [com.cem.ed.term :as term]
+            [cem.macros :refer [bb]]
+            [cem.term :as term]
             [nrepl.server :as nrepl-server])
   (:import [java.lang System]
            [sun.misc Signal SignalHandler]))

@@ -1,14 +1,14 @@
-(ns com.cem.ed.term
+(ns cem.term
   (:refer-clojure :exclude [*in* *out* *err*])
   (:require [clojure.core.async :as async :refer [<! >! alts! buffer chan
                                                   close! go]]
-            [com.cem.ed.macros :refer [->hash bb disable-obj-bitfield-option!]]
-            [com.cem.ed.term.constants :refer [csi]]
-            [com.cem.ed.term.kitty :as kitty :refer [begin-kitty-keyboard-protocol!
+            [cem.macros :refer [->hash bb disable-obj-bitfield-option!]]
+            [cem.term.constants :refer [csi]]
+            [cem.term.kitty :as kitty :refer [begin-kitty-keyboard-protocol!
                                                      end-kitty-keyboard-protocol!]]
-            [com.cem.ed.utf8 :refer [channel+first-byte->key-event]]
-            [com.cem.ed.utils :refer [get-timestamp rand-int-between]])
-  (:import [com.cem.ed.platform.linux
+            [cem.utf8 :refer [channel+first-byte->key-event]]
+            [cem.utils :refer [get-timestamp rand-int-between]])
+  (:import [cem.platform.linux
             LibC
             LibC$Termios
             LibC$Winsize

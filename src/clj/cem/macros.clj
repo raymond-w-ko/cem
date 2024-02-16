@@ -1,4 +1,4 @@
-(ns com.cem.ed.macros)
+(ns cem.macros)
 
 (defmacro ->hash [& vars]
   (list `zipmap

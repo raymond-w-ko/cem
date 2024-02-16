@@ -1,4 +1,4 @@
-(ns com.cem.ed.utils
+(ns cem.utils
   (:import [java.time Instant]))
 
 (defn get-timestamp []

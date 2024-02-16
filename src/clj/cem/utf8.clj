@@ -1,6 +1,6 @@
-(ns com.cem.ed.utf8
+(ns cem.utf8
   (:require [clojure.core.async :as async :refer [<!!]]
-            [com.cem.ed.macros :refer [bb]]))
+            [cem.macros :refer [bb]]))
 
 (defn utf8-4-bytes-to-code-point [ch b1]
   (bb

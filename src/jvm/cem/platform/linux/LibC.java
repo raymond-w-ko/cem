@@ -1,4 +1,4 @@
-package com.cem.ed.platform.linux;
+package cem.platform.linux;
 
 import java.util.Arrays;
 import java.util.List;

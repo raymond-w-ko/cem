@@ -1,7 +1,7 @@
-(ns com.cem.ed.term.kitty
+(ns cem.term.kitty
   (:require [clojure.core.async :as async :refer [<!! alts!! timeout]]
-            [com.cem.ed.macros :refer [bb]]
-            [com.cem.ed.term.constants :refer [csi]])
+            [cem.macros :refer [bb]]
+            [cem.term.constants :refer [csi]])
   (:import [java.util ArrayList]))
 
 (def kitty-keyboard-protocol-begin-code "Kitty Keyboard Protocol Begin" (str csi ">1u"))

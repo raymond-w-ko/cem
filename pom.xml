@@ -1,8 +1,8 @@
 <project>
   <modelVersion>4.0.0</modelVersion>
  
-  <groupId>com.cem</groupId>
-  <artifactId>ed</artifactId>
+  <groupId>org.cem</groupId>
+  <artifactId>cem</artifactId>
   <version>1</version>
 
   <properties>

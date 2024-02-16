@@ -1,3 +1,3 @@
-(ns com.cem.ed.term.constants)
+(ns cem.term.constants)
 
 (def csi "Control Sequence Introducer" "\u001B[")

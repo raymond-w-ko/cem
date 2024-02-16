@@ -6,8 +6,8 @@
   {:exclude #{}
    :exclude-regex #{}}}
  :lint-as {}
- :hooks {:analyze-call {com.cem.ed.macros/binding-block hooks.binding-block/binding-block
-                        com.cem.ed.macros/bb hooks.binding-block/bb}
-         :macroexpand {com.cem.ed.macros/args macros/args
-                       com.cem.ed.macros/enable-obj-bitfield-option! macros/enable-obj-bitfield-option!
-                       com.cem.ed.macros/disable-obj-bitfield-option! macros/disable-obj-bitfield-option!}}}
+ :hooks {:analyze-call {cem.macros/binding-block hooks.binding-block/binding-block
+                        cem.macros/bb hooks.binding-block/bb}
+         :macroexpand {cem.macros/args macros/args
+                       cem.macros/enable-obj-bitfield-option! macros/enable-obj-bitfield-option!
+                       cem.macros/disable-obj-bitfield-option! macros/disable-obj-bitfield-option!}}}
