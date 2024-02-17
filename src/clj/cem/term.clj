@@ -3,13 +3,18 @@
   (:require [cem.macros :refer [->hash bb disable-obj-bitfield-option!]]
             [cem.term.atoms :refer [*esc-timeout-ms *initial-termios
                                     *string-caps *term-dim]]
-            [cem.term.constants :refer [*in* *out* csi stdin-fd stdout-fd]]
+            [cem.term.constants :refer [*in* *out* code-point-widths
+                                        code-point-widths-file
+                                        code-point-widths-file-path csi
+                                        num-code-points resources-path
+                                        stdin-fd stdout-fd]]
             [cem.term.kitty :as kitty :refer [begin-kitty-keyboard-protocol!
                                               end-kitty-keyboard-protocol!]]
             [cem.utf8 :refer [channel+first-byte->key-event]]
             [cem.utils :refer [get-timestamp rand-int-between]]
             [clojure.core.async :as async :refer [<! >! alts! buffer chan
-                                                  close! go]])
+                                                  close! go]]
+            [clojure.java.io :as io])
   (:import [cem.platform.linux
             LibC
             LibC$Termios
@@ -42,16 +47,28 @@
    cap (.getString p 0)
    (swap! *string-caps assoc capname cap)))
 
+(defn load-string-caps! []
+  (load-string-cap! "clear")
+  (load-string-cap! "rmcup")
+  (load-string-cap! "smcup")
+  (load-string-cap! "rmam")
+  (load-string-cap! "smam"))
+
+(defn load-code-point-widths! []
+  (if-let [res (io/resource code-point-widths-file)]
+    (let [x (io/input-stream res)]
+      (with-open [f (new java.io.DataInputStream x)]
+        (.readFully f code-point-widths)))
+    (when (.isDirectory (io/file resources-path))
+      (dorun (for [i (range num-code-points)]
+               (aset code-point-widths i (byte (LibC/wcwidth i)))))
+      (with-open [f (new java.io.FileOutputStream code-point-widths-file-path)]
+        (.write f code-point-widths)))))
+
 (defn init! []
-  ;; TODO: does this need to be more specific?
-  (bb
-   (Ncurses/setupterm nil stdout-fd nil)
-   (load-string-cap! "clear")
-   (load-string-cap! "rmcup")
-   (load-string-cap! "smcup")
-   (load-string-cap! "rmam")
-   (load-string-cap! "smam")
-   nil))
+  (Ncurses/setupterm nil stdout-fd nil)
+  (load-string-caps!)
+  (load-code-point-widths!))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
