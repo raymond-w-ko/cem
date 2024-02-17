@@ -6,7 +6,7 @@
         (vec vars)))
 
 
-(defmacro args
+#_(defmacro args
   "Converts (args a b c) -> (assoc args :a a :b b :c c)"
   [& vars]
   (let [xs (interleave (mapv keyword vars)
@@ -79,7 +79,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defmacro enable-obj-bitfield-option! [o field flag]
+#_(defmacro enable-obj-bitfield-option! [o field flag]
   `(let [x# (. ~o ~field)]
      (set! (. ~o ~field) (bit-or x# ~flag))))
 
