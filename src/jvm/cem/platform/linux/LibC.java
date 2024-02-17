@@ -113,7 +113,13 @@ public class LibC {
   public static native int tcsetattr(int fd, int optional_actions, Termios termios);
   public static native void cfmakeraw(Termios termios);
 
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
   public static final int TIOCGWINSZ = 0x5413;
 
   public static native int ioctl(int fd, int request, Structure args);
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  public static native int wcwidth(int c);
 }
