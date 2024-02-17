@@ -1,34 +1,23 @@
 (ns cem.term
   (:refer-clojure :exclude [*in* *out* *err*])
-  (:require [clojure.core.async :as async :refer [<! >! alts! buffer chan
-                                                  close! go]]
-            [cem.macros :refer [->hash bb disable-obj-bitfield-option!]]
-            [cem.term.constants :refer [csi]]
+  (:require [cem.macros :refer [->hash bb disable-obj-bitfield-option!]]
+            [cem.term.atoms :refer [*esc-timeout-ms *initial-termios
+                                    *string-caps *term-dim]]
+            [cem.term.constants :refer [*in* *out* csi stdin-fd stdout-fd]]
             [cem.term.kitty :as kitty :refer [begin-kitty-keyboard-protocol!
-                                                     end-kitty-keyboard-protocol!]]
+                                              end-kitty-keyboard-protocol!]]
             [cem.utf8 :refer [channel+first-byte->key-event]]
-            [cem.utils :refer [get-timestamp rand-int-between]])
+            [cem.utils :refer [get-timestamp rand-int-between]]
+            [clojure.core.async :as async :refer [<! >! alts! buffer chan
+                                                  close! go]])
   (:import [cem.platform.linux
             LibC
             LibC$Termios
             LibC$Winsize
             Ncurses]
            [com.sun.jna Pointer]
-           [java.io FileDescriptor FileInputStream FileOutputStream]
            [java.lang System]
            [sun.misc Signal SignalHandler]))
-
-(def stdin-fd 0)
-(def stdout-fd 1)
-;; (def stderr-fd 2)
-(def ^:dynamic ^FileInputStream *in* (new FileInputStream (FileDescriptor/in)))
-(def ^:dynamic ^FileOutputStream *out* (new FileOutputStream (FileDescriptor/out)))
-;; (def ^:dynamic *err* (new FileOutputStream (FileDescriptor/err)))
-(def *term-dim (atom {:rows nil :cols nil}))
-(defonce *initial-termios (atom nil))
-
-(defonce *string-caps (atom {}))
-(defonce *esc-timeout-ms (atom 250))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
