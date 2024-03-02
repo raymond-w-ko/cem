@@ -49,10 +49,22 @@
 
 (defn load-string-caps! []
   (load-string-cap! "clear")
-  (load-string-cap! "rmcup")
-  (load-string-cap! "smcup")
-  (load-string-cap! "rmam")
-  (load-string-cap! "smam"))
+  (load-string-cap! "rmcup") ;; normal screen
+  (load-string-cap! "smcup") ;; alternate screen
+  (load-string-cap! "rmam") ;; disable line wrap
+  (load-string-cap! "smam") ;; enable line wrap
+
+  (load-string-cap! "sgr0") ;; turn off all attribute modes
+  (load-string-cap! "dim") ;; enable dim (half-bright)
+  (load-string-cap! "bold") ;; enable bold
+  (load-string-cap! "blink") ;; enable blink
+
+  (load-string-cap! "sitm") ;; enable italics
+  (load-string-cap! "ritm") ;; disable italics
+
+  (load-string-cap! "smul") ;; enable straight underline (classic)
+  (load-string-cap! "rmul") ;; disable underline
+  nil)
 
 (defn load-code-point-widths! []
   (if-let [res (io/resource code-point-widths-file)]
@@ -87,6 +99,14 @@
 (defn set-bg-color! [r g b] (out! csi) (out! (str "48;2;" r ";" g ";" b "m")))
 (defn set-fg-color! [r g b] (out! csi) (out! (str "38;2;" r ";" g ";" b "m")))
 (defn move-cursor! [x y] (out! (str csi (inc y) ";" (inc x) "H")))
+(defn reset-display-attributes! [] (out! (get @*string-caps "sgr0")))
+(defn enable-dim! [] (out! (get @*string-caps "dim")))
+(defn enable-bold! [] (out! (get @*string-caps "bold")))
+(defn enable-blink! [] (out! (get @*string-caps "blink")))
+(defn enable-italic! [] (out! (get @*string-caps "sitm")))
+(defn disable-italic! [] (out! (get @*string-caps "ritm")))
+(defn enable-classic-underline! [] (out! (get @*string-caps "smul")))
+(defn disable-underline! [] (out! (get @*string-caps "rmul")))
 
 (defn setup-termios! []
   (bb
@@ -118,7 +138,7 @@
 (defn restore-termios! []
   (LibC/tcsetattr stdin-fd LibC/TCSANOW @*initial-termios))
 
-(defn setup
+(defn setup!
   "Use this to set up the terminal before running your program."
   []
   (setup-termios!)
