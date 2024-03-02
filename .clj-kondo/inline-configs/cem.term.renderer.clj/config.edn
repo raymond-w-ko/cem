@@ -1,0 +1,1 @@
+{:lint-as {cem.term.renderer/cwhen clojure.core/when, cem.term.renderer/cif clojure.core/if}}
