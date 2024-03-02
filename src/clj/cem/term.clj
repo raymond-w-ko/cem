@@ -1,26 +1,20 @@
 (ns cem.term
   (:refer-clojure :exclude [*in* *out* *err*])
   (:require [cem.macros :refer [->hash bb disable-obj-bitfield-option!]]
-            [cem.term.atoms :refer [*esc-timeout-ms *initial-termios
-                                    *string-caps *term-dim]]
-            [cem.term.constants :refer [*in* *out* code-point-widths
-                                        code-point-widths-file
-                                        code-point-widths-file-path csi
-                                        num-code-points resources-path
-                                        stdin-fd stdout-fd]]
-            [cem.term.kitty :as kitty :refer [begin-kitty-keyboard-protocol!
-                                              end-kitty-keyboard-protocol!]]
+            [cem.term.atoms :refer [*esc-timeout-ms *initial-termios *term-dim]]
+            [cem.term.channels :refer [request-stop-rendering-ch
+                                       stop-rendering-done-ch]]
+            [cem.term.constants :refer [*in* flush-stdout! out! stdin-fd]]
+            [cem.term.kitty :as kitty :refer [kitty-keyboard-protocol-begin-code
+                                              kitty-keyboard-protocol-end-code]]
+            [cem.term.ops :refer [alternate-screen clear disable-line-wrap
+                                  enable-line-wrap normal-screen
+                                  reset-color-output]]
             [cem.utf8 :refer [channel+first-byte->key-event]]
-            [cem.utils :refer [get-timestamp rand-int-between]]
+            [cem.utils :refer [get-timestamp]]
             [clojure.core.async :as async :refer [<! >! alts! buffer chan
-                                                  close! go]]
-            [clojure.java.io :as io])
-  (:import [cem.platform.linux
-            LibC
-            LibC$Termios
-            LibC$Winsize
-            Ncurses]
-           [com.sun.jna Pointer]
+                                                  close! go]])
+  (:import [cem.platform.linux LibC LibC$Termios LibC$Winsize]
            [java.lang System]
            [sun.misc Signal SignalHandler]))
 
@@ -36,79 +30,11 @@
         (reset! *term-dim new-dim))
       (throw (new Exception "failed to get terminal size with ioctl()")))))
 
-(defn load-string-cap! [^String capname]
-  (bb
-   p (Ncurses/tigetstr capname)
-   nv (Pointer/nativeValue p)
-
-   :return-when (= nv (long -1))
-   (throw (new Exception (str "failed to load string capability: " capname)))
-
-   cap (.getString p 0)
-   (swap! *string-caps assoc capname cap)))
-
-(defn load-string-caps! []
-  (load-string-cap! "clear")
-  (load-string-cap! "rmcup") ;; normal screen
-  (load-string-cap! "smcup") ;; alternate screen
-  (load-string-cap! "rmam") ;; disable line wrap
-  (load-string-cap! "smam") ;; enable line wrap
-
-  (load-string-cap! "sgr0") ;; turn off all attribute modes
-  (load-string-cap! "dim") ;; enable dim (half-bright)
-  (load-string-cap! "bold") ;; enable bold
-  (load-string-cap! "blink") ;; enable blink
-
-  (load-string-cap! "sitm") ;; enable italics
-  (load-string-cap! "ritm") ;; disable italics
-
-  (load-string-cap! "smul") ;; enable straight underline (classic)
-  (load-string-cap! "rmul") ;; disable underline
-  nil)
-
-(defn load-code-point-widths! []
-  (if-let [res (io/resource code-point-widths-file)]
-    (let [x (io/input-stream res)]
-      (with-open [f (new java.io.DataInputStream x)]
-        (.readFully f code-point-widths)))
-    (when (.isDirectory (io/file resources-path))
-      (dorun (for [i (range num-code-points)]
-               (aset code-point-widths i (byte (LibC/wcwidth i)))))
-      (with-open [f (new java.io.FileOutputStream code-point-widths-file-path)]
-        (.write f code-point-widths)))))
-
-(defn init! []
-  (Ncurses/setupterm nil stdout-fd nil)
-  (load-string-caps!)
-  (load-code-point-widths!))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn out! [^String s]
-  (bb
-   bites (.getBytes s "UTF-8")
-   (.write *out* bites)))
-
-(defn flush! [] (.flush *out*))
-(defn clear! [] (out! (get @*string-caps "clear")))
-(defn alternate-screen! [] (out! (get @*string-caps "smcup")))
-(defn normal-screen! [] (out! (get @*string-caps "rmcup")))
-(defn disable-line-wrap! [] (out! (get @*string-caps "rmam")))
-(defn enable-line-wrap! [] (out! (get @*string-caps "smam")))
-(defn reset-color-output! [] (out! csi) (out! "0m"))
-(defn set-bg-color! [r g b] (out! csi) (out! (str "48;2;" r ";" g ";" b "m")))
-(defn set-fg-color! [r g b] (out! csi) (out! (str "38;2;" r ";" g ";" b "m")))
-(defn move-cursor! [x y] (out! (str csi (inc y) ";" (inc x) "H")))
-(defn reset-display-attributes! [] (out! (get @*string-caps "sgr0")))
-(defn enable-dim! [] (out! (get @*string-caps "dim")))
-(defn enable-bold! [] (out! (get @*string-caps "bold")))
-(defn enable-blink! [] (out! (get @*string-caps "blink")))
-(defn enable-italic! [] (out! (get @*string-caps "sitm")))
-(defn disable-italic! [] (out! (get @*string-caps "ritm")))
-(defn enable-classic-underline! [] (out! (get @*string-caps "smul")))
-(defn disable-underline! [] (out! (get @*string-caps "rmul")))
-
-(defn setup-termios! []
+(defn setup-termios!
+  "This mutates terminal state and requires a teardown."
+  []
   (bb
    termios (new LibC$Termios)
    (reset! *initial-termios termios)
@@ -138,63 +64,40 @@
 (defn restore-termios! []
   (LibC/tcsetattr stdin-fd LibC/TCSANOW @*initial-termios))
 
+(defn teardown!
+  "Use this to clean up the terminal before exiting."
+  []
+  (out! kitty-keyboard-protocol-end-code)
+  (out! (enable-line-wrap))
+  (out! (reset-color-output))
+  (out! (normal-screen))
+  (restore-termios!)
+  (flush-stdout!)
+  :teardown-done)
+
+
 (defn setup!
   "Use this to set up the terminal before running your program."
   []
   (setup-termios!)
+  ;; TODO: is it safe if we get interrupted before setup is done?
+  (Signal/handle (new Signal "INT") (reify SignalHandler
+                                      (handle [_this _sig]
+                                        (teardown!)
+                                        (System/exit 0))))
   (update-terminal-size!)
   (Signal/handle (new Signal "WINCH") (reify SignalHandler
                                         (handle [_this _sig]
                                           (update-terminal-size!))))
-  (alternate-screen!)
-  (disable-line-wrap!)
-  (begin-kitty-keyboard-protocol! out!)
-  (clear!)
-  (println "terminal size: " @*term-dim)
-  (println @*initial-termios)
-  ;;(println "This is the alternate screen!")
-  (flush!)
-  nil)
+  (out! (alternate-screen))
+  (out! (disable-line-wrap))
+  (out! kitty-keyboard-protocol-begin-code)
+  (out! (clear))
+  (flush-stdout!)
+  :setup-done)
 
-(defn teardown!
-  "Use this to clean up the terminal before exiting."
-  []
-  (end-kitty-keyboard-protocol! out!)
-  (enable-line-wrap!)
-  (reset-color-output!)
-  (normal-screen!)
-  (restore-termios!)
-  (flush!)
-  nil)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defonce request-stop-rendering-ch (chan 1))
-(defonce stop-rendering-done-ch (chan 1))
-
-(defn render-loop! []
-  (let [*last-x (atom -1)
-        *last-y (atom -1)]
-    (go
-      (loop [x 0
-             y 0]
-        (let [[_v ch] (alts! [(async/timeout 1) request-stop-rendering-ch])]
-          (if (= ch request-stop-rendering-ch)
-            (close! stop-rendering-done-ch)
-            (let [{:keys [rows cols]} @*term-dim
-                  new-x (inc x)
-                  new-y (if (>= new-x cols) (inc y) y)
-                  new-x (mod new-x cols)
-                  new-y (mod new-y rows)]
-              (when-not (and (= new-y @*last-y))
-                (move-cursor! new-x new-y)
-                (reset! *last-x new-x)
-                (reset! *last-y new-y))
-              (set-bg-color! (rand-int 256) (rand-int 256) (rand-int 256))
-              (set-fg-color! (rand-int 256) (rand-int 256) (rand-int 256))
-              (out! (new String (int-array [(rand-int-between 0x20 0x7e)]) 0 1))
-              (recur new-x new-y))))))))
-
 
 (defn die-properly! []
   (go
@@ -211,7 +114,6 @@
     (die-properly!)
     :else
     (out! (str "key: " k " mods: " mods " t: " t  "\n"))))
-
 
 (defn stdin-read-loop! []
   (let [ch (chan (buffer 16))]

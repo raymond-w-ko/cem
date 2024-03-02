@@ -1,6 +1,8 @@
 (ns cem.term.constants
   (:refer-clojure :exclude [*in* *out* *err*])
-  (:import [java.io FileDescriptor FileInputStream FileOutputStream]))
+  (:require [cem.macros :refer [bb]]) 
+  (:import [cem.term CodePointStringCache]
+           [java.io FileDescriptor FileInputStream FileOutputStream]))
 
 (def csi "Control Sequence Introducer" "\u001B[")
 
@@ -18,6 +20,20 @@
 (def resources-path "src/resources")
 
 (def num-code-points 0x110000)
-(def code-point-widths (byte-array 0x110000))
+(def ^"[B" code-point-widths (byte-array 0x110000)) ;; ]
 (def code-point-widths-file "code-point-widths.bin")
 (def code-point-widths-file-path (str resources-path "/" code-point-widths-file))
+
+(def ^CodePointStringCache code-point-string-cache (new CodePointStringCache))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn out!
+  "Writes a String (which may contain control characters) to the standard output stream."
+  [^String s]
+  (bb
+   ^"[B" bites (.getBytes s "UTF-8") ;; ]
+   (.write *out* bites)))
+
+(defn flush-stdout! []
+  (.flush *out*))

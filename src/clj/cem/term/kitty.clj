@@ -63,10 +63,6 @@
 
 (def escape-code-regex #"(\d+);(\d+)*([u~ABCDEFHPQS])")
 
-
-(defn begin-kitty-keyboard-protocol! [out!] (out! kitty-keyboard-protocol-begin-code))
-(defn end-kitty-keyboard-protocol! [out!] (out! kitty-keyboard-protocol-end-code))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn parse-mods
