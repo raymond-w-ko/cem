@@ -19,7 +19,7 @@ public final class TermRenderState {
 
   public StringBuilder sb;
 
-  public TermRenderState() {
+  public void reset() {
     lastCol = Integer.MIN_VALUE;
     lastRow = Integer.MIN_VALUE;
     lastDim = -1;
@@ -31,6 +31,14 @@ public final class TermRenderState {
     lastFgColor = 0x11223300;
     lastBgColor = 0x11223300;
 
-    sb = new StringBuilder();
+    if (sb == null) {
+      sb = new StringBuilder();
+    } else {
+      sb.setLength(0);
+    }
+  }
+
+  public TermRenderState() {
+    reset();
   }
 }
