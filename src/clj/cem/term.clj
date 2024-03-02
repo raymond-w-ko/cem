@@ -1,19 +1,18 @@
 (ns cem.term
   (:refer-clojure :exclude [*in* *out* *err*])
   (:require [cem.macros :refer [->hash bb disable-obj-bitfield-option!]]
-            [cem.term.atoms :refer [*esc-timeout-ms *initial-termios *term-dim]]
-            [cem.term.channels :refer [request-stop-rendering-ch
-                                       stop-rendering-done-ch]]
             [cem.term.constants :refer [*in* flush-stdout! out! stdin-fd]]
             [cem.term.kitty :as kitty :refer [kitty-keyboard-protocol-begin-code
                                               kitty-keyboard-protocol-end-code]]
             [cem.term.ops :refer [alternate-screen clear disable-line-wrap
                                   enable-line-wrap normal-screen
                                   reset-color-output]]
+            [cem.term.state :as state :refer [*esc-timeout-ms *initial-termios
+                                              *term-dim]]
             [cem.utf8 :refer [channel+first-byte->key-event]]
             [cem.utils :refer [get-timestamp]]
-            [clojure.core.async :as async :refer [<! >! alts! buffer chan
-                                                  close! go]])
+            [cem.term.renderer]
+            [clojure.core.async :as async :refer [<! >! buffer chan close! go]])
   (:import [cem.platform.linux LibC LibC$Termios LibC$Winsize]
            [java.lang System]
            [sun.misc Signal SignalHandler]))
@@ -86,6 +85,8 @@
                                         (teardown!)
                                         (System/exit 0))))
   (update-terminal-size!)
+  (let [{:keys [rows cols]} @*term-dim]
+    (.resize state/root-rect rows cols))
   (Signal/handle (new Signal "WINCH") (reify SignalHandler
                                         (handle [_this _sig]
                                           (update-terminal-size!))))
@@ -101,8 +102,8 @@
 
 (defn die-properly! []
   (go
-    (>! request-stop-rendering-ch true)
-    (alts! [(async/timeout 1) stop-rendering-done-ch])
+    ;; (>! request-stop-rendering-ch true)
+    ;; (alts! [(async/timeout 1) stop-rendering-done-ch])
     (teardown!)
     (System/exit 0)))
 
