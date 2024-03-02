@@ -1,6 +1,6 @@
 (ns cem.term.ops
   (:refer-clojure :exclude [*in* *out* *err*]) 
-  (:require [cem.term.atoms :refer [*string-caps]]
+  (:require [cem.term.state :refer [*string-caps]]
             [cem.term.constants :refer [csi]]))
 
 (defn clear [] (get @*string-caps "clear"))

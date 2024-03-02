@@ -1,7 +1,7 @@
 (ns cem.term.init
   (:refer-clojure :exclude [*in* *out* *err*])
   (:require [cem.macros :refer [bb]]
-            [cem.term.atoms :refer [*string-caps]]
+            [cem.term.state :refer [*string-caps]]
             [cem.term.constants :refer [code-point-widths
                                         code-point-widths-file
                                         code-point-widths-file-path
